@@ -1,0 +1,33 @@
+{% extends "layout.html" %}
+{% block body %}
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Current Location</title>
+</head>
+
+<body>
+    <header>
+        <h1>Current Location</h1>
+        
+    </header>
+    <main>
+        {% if latitude is not none %}
+        <p>Latitude: {{ latitude }}</p>
+        <p>Longitude: {{ longitude }}</p>
+        <p>Country: {{ address['country'] }}</p>
+        <p>State: {{ address['state'] }}</p>
+        <p>City: {{ address['city'] }}</p>
+        <p>Suburb: {{ address['suburb'] }}</p>
+        <p>Road: {{ address['road'] }}</p>
+        <p>House Number: {{ address['house_number'] }}</p>
+        {% else %}
+        <p>Could not determine your location.</p>
+        {% endif %}
+    </main>
+</body>
+
+</html>
+
+{%endblock%}

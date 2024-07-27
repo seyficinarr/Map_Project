@@ -1,0 +1,86 @@
+{% extends "layout.html" %}
+{% block body %}
+
+<div class="container">
+    <h2>Isparks</h2>
+    <table class="table table-striped table-hover table-bordered" id="isparks-table">
+        <thead>
+            <tr>
+                <th>Park Name</th>
+                <th>Location Name</th>
+                <th>Park Description</th>
+                <th>Capacity</th>
+                <th>County</th>
+                <th>Working Time</th>
+                <th>Distance(km)</th>
+                <th>Status</th>
+                <th>Get Direction</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ispark in isparks_list %}
+            <tr>
+                <td>{{ ispark.park_name }}</td>
+                <td>{{ ispark.location_name }}</td>
+                <td>{{ ispark.park_type_desc }}</td>
+                <td id="centered">{{ ispark.capacity_of_park }}</td>
+                <td>{{ ispark.county_name }}</td>
+                <td class="working-time">{{ ispark.working_time }}</td>
+                <td id="centered">
+                    {{ get_distance(ispark.latitude, ispark.longitude, getCurrentLocation()[0], getCurrentLocation()[1])
+                    }}
+                </td>
+                <td class="status"></td>
+                <td><a href="https://www.google.com/maps/search/?api=1&query={{ispark.park_name}}+ispark" target="_blank">Get Direction</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+    // Function to check if current time is within the interval
+    function isCurrentTimeInInterval(interval) {
+        if(interval ==="24 Saat"){
+            return true;
+        }
+        const [start, end] = interval.split('-').map(time => time.trim());
+
+        // Get current time
+        const now = new Date();
+        const currentTime = now.getHours() * 60 + now.getMinutes(); // current time in minutes
+
+        // Parse start and end times
+        const [startHours, startMinutes] = start.split(':').map(Number);
+        const [endHours, endMinutes] = end.split(':').map(Number);
+
+        const startTime = startHours * 60 + startMinutes; // start time in minutes
+        const endTime = endHours * 60 + endMinutes; // end time in minutes
+
+        // Check if current time is within the interval
+        return startTime <= currentTime && currentTime <= endTime;
+    }
+
+    // Function to update status based on working time  
+    function updateIsparkStatus() {
+        const rows = document.querySelectorAll('#isparks-table tbody tr');
+
+        rows.forEach(row => {
+            const workingTime = row.querySelector('.working-time').textContent.trim();
+            const statusCell = row.querySelector('.status');
+
+            if (isCurrentTimeInInterval(workingTime)) {
+                statusCell.textContent = 'Open';
+                statusCell.style.color = 'green';
+            } else {
+                statusCell.textContent = 'Closed';
+                statusCell.style.color = 'rgb(239, 10, 10)';
+            }
+        });
+    }
+
+    // Run the status update function on page load
+    document.addEventListener('DOMContentLoaded', updateIsparkStatus);
+</script>
+
+{% endblock %}

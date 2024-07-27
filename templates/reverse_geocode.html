@@ -1,0 +1,37 @@
+{% extends "layout.html" %}
+{% block body %}
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reverse Geocode</title>
+</head>
+
+<body>
+    <header>
+        <h1>Reverse Geocode</h1>
+     </header>
+    <main>
+        <form method="get" action="{{ url_for('reverse_geocode_route') }}">
+            <label for="latitude">Latitude:</label>
+            <input type="text" id="latitude" name="latitude" required>
+            <label for="longitude">Longitude:</label>
+            <input type="text" id="longitude" name="longitude" required>
+            <button type="submit">Submit</button>
+        </form>
+        {% if address %}
+        <p>Country: {{ address['country'] }}</p>
+        <p>State: {{ address['state'] }}</p>
+        <p>City: {{ address['city'] }}</p>
+        <p>Suburb: {{ address['suburb'] }}</p>
+        <p>Road: {{ address['road'] }}</p>
+        <p>House Number: {{ address['house_number'] }}</p>
+
+        <p>{{address}}</p>
+        {% endif %}
+        <a href="{{ url_for('index') }}">Home</a>
+    </main>
+</body>
+
+</html>
+{%endblock%}
