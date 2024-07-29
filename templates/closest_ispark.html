@@ -8,7 +8,7 @@
 </head>
 
 <body>
-    
+
     <main>
         <h2>Closest Ispark Location</h2>
         {% if closest_ispark %}
@@ -16,12 +16,15 @@
         <p>Latitude: {{ closest_ispark.latitude }}</p>
         <p>Longitude: {{ closest_ispark.longitude }}</p>
         <p>Distance: {{ distance }} km</p>
-        <a href="https://www.google.com/search?q={{closest_ispark.name}}">Go to Closest Ispark</a>
-        <p><img src="{{ image_url }}" alt="Image of {{ closest_ispark.name }}" style="max-width: 100%; height: auto;"></p>
+        <a href="https://maps.google.com/?q={{closest_ispark.latitude}},{{closest_ispark.longitude}}"
+            target="_blank">Open the ispark on the map</a>
+        <p><a href="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint={{closest_ispark.latitude}},{{closest_ispark.longitude}}
+        " target="_blank">See on pano viewpoint</p>
+
         {% else %}
         <p>No nearby Ispark found.</p>
         {% endif %}
-        
+
     </main>
 </body>
 

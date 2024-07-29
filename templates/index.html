@@ -9,22 +9,29 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 
 
-    <title>{% block title %}Map Application{% endblock %}</title>
+    <title>{% block title %}Ispark Map Application{% endblock %}</title>
 </head>
 
 <body>
     {% include "includes/navbar.html" %}
     <header>
-        <main>
-            <h2>Welcome to the Map Project!</h2>
+        <main style="margin:20px">
+            <h2>Welcome to the Ispark Map Project!</h2>
             <p>Select an option from the menu below.</p>
         </main>
-        <h1>Map Project</h1>
+
         <ul>
-            <li><a href="{{ url_for('current_location_page') }}">Current Location</a></li>
-            <li><a href="{{ url_for('closest_ispark_page') }}">Closest Ispark</a></li>
-            <li><a href="{{ url_for('reverse_geocode_route') }}">Reverse Geocode</a></li>
+            <li><a href="{{ url_for('current_location_page') }}" style="font-weight: bold; color: #ff0000;">Current
+                    Location</a>
+            </li>
+            <li><a href="{{ url_for('closest_ispark_page') }}" style="font-weight: bold; color: #ff0000;">Closest
+                    Ispark</a>
+            </li>
+            <li><a href="{{ url_for('reverse_geocode_route') }}" style="font-weight: bold; color: #ff0000;">Reverse
+                    Geocode</a>
+            </li>
         </ul>
+
     </header>
 
 
@@ -34,11 +41,36 @@
         {% block body %}{% endblock %}
     </div>
 
+    <style>
+        body {
+            position: relative;
+            /* Ensure the body has a relative position */
+            background-color: #f5f5f5;
+            /* Optional: Set a background color */
+        }
+
+        /* Use a pseudo-element to apply opacity to the background image */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: url("{{ url_for('static', filename='images/indir.jpg') }}");
+            background-repeat: no-repeat;
+            background-size: cover;
+            background-position: center;
+            opacity: 0.5;
+            /* Adjust the opacity level */
+            z-index: -1;
+            /* Place behind content */
+        }
+    </style>
 
 
-    <footer class="footer">
-        <h6></h6>
-        <h6></h6>
+
+    <footer class="footer" style="font-weight:bold">
         <p>© 2024 Turkcell Ispark Map Application</p>
         <p>Powered by</p>
     </footer>

@@ -9,6 +9,10 @@ import requests
 from sqlalchemy import create_engine, Column, Integer, String, Float, Text
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.sql import func
+import tkinter as tk
+from tkintermapview import TkinterMapView
+import tkinter as tk
+from tkintermapview import TkinterMapView
 
 app = Flask(__name__)
 
@@ -63,13 +67,13 @@ def checkHour(interval):
 #     return g.latlng if g.latlng else (None, None)
 
 def getCurrentLocation():
-    return (40, 29)
+    return (40.955857, 29.117504)
 
 
 def reverse_geocode(latitude, longitude):
     geolocator = Nominatim(user_agent="geoapiExercises")
     try:
-        location = geolocator.reverse((latitude, longitude), timeout=10)
+        location = geolocator.reverse((latitude, longitude), timeout=100)
         if location:
             address = location.raw["address"]
             country = address.get("country", "Country not found")
@@ -210,6 +214,13 @@ def reverse_geocode_route():
         if latitude is not None and longitude is not None:
             address = reverse_geocode(latitude, longitude)
     return render_template("reverse_geocode.html", address=address)
+
+@app.route("/ispark/<int:id>")
+def ispark(id):
+    ispark = session.query(Ispark).get(id)
+    lat = ispark.latitude
+    lon = ispark.longitude
+    return render_template("ispark.html", ispark=ispark, lat=lat, lon=lon)
 
 
 if __name__ == "__main__":

@@ -3,35 +3,69 @@
 
 <div class="container">
     <h2>Isparks</h2>
+
+    <!-- Table Section -->
     <table class="table table-striped table-hover table-bordered" id="isparks-table">
         <thead>
             <tr>
-                <th>Park Name</th>
-                <th>Location Name</th>
-                <th>Park Description</th>
-                <th>Capacity</th>
-                <th>County</th>
-                <th>Working Time</th>
-                <th>Distance(km)</th>
-                <th>Status</th>
+                <th>
+                    Park Name
+                    <input type="text" id="filter-park-name" class="form-control" placeholder="Filter by Park Name">
+                </th>
+                <th>
+                    Location Name
+                    <input type="text" id="filter-location-name" class="form-control"
+                        placeholder="Filter by Location Name">
+                </th>
+                <th>
+                    Park Description
+                    <input type="text" id="filter-park-description" class="form-control"
+                        placeholder="Filter by Park Description">
+                </th>
+                <th>
+                    Capacity
+                    <input type="number" id="filter-capacity" class="form-control" placeholder="Filter by Capacity">
+                </th>
+                <th>
+                    County
+                    <input type="text" id="filter-county" class="form-control" placeholder="Filter by County">
+                </th>
+                <th>
+                    Working Time
+                    <input type="text" id="filter-working-time" class="form-control"
+                        placeholder="Filter by Working Time">
+                </th>
+                <th>
+                    Distance (km)
+                    <input type="number" id="filter-distance" class="form-control" placeholder="Filter by Distance">
+                </th>
+                <th>
+                    Status
+                    <input type="text" id="filter-status" class="form-control" placeholder="Filter by Status">
+                </th>
                 <th>Get Direction</th>
             </tr>
         </thead>
         <tbody>
             {% for ispark in isparks_list %}
             <tr>
-                <td>{{ ispark.park_name }}</td>
-                <td>{{ ispark.location_name }}</td>
-                <td>{{ ispark.park_type_desc }}</td>
-                <td id="centered">{{ ispark.capacity_of_park }}</td>
-                <td>{{ ispark.county_name }}</td>
-                <td class="working-time">{{ ispark.working_time }}</td>
-                <td id="centered">
+                <td data-url="{{ url_for('ispark', id=ispark.id) }}" class="clickable-row">{{ ispark.park_name }}</td>
+                <td data-url="{{ url_for('ispark', id=ispark.id) }}" class="clickable-row">{{ ispark.location_name }}
+                </td>
+                <td data-url="{{ url_for('ispark', id=ispark.id) }}" class="clickable-row">{{ ispark.park_type_desc }}
+                </td>
+                <td data-url="{{ url_for('ispark', id=ispark.id) }}" class="clickable-row" id="centered">{{
+                    ispark.capacity_of_park }}</td>
+                <td data-url="{{ url_for('ispark', id=ispark.id) }}" class="clickable-row">{{ ispark.county_name }}</td>
+                <td data-url="{{ url_for('ispark', id=ispark.id) }}" class="clickable-row working-time">{{
+                    ispark.working_time }}</td>
+                <td data-url="{{ url_for('ispark', id=ispark.id) }}" class="clickable-row working-time" id="centered">
                     {{ get_distance(ispark.latitude, ispark.longitude, getCurrentLocation()[0], getCurrentLocation()[1])
                     }}
                 </td>
-                <td class="status"></td>
-                <td><a href="https://www.google.com/maps/search/?api=1&query={{ispark.park_name}}+ispark" target="_blank">Get Direction</a></td>
+                <td data-url="{{ url_for('ispark', id=ispark.id) }}" class="clickable-row working-time status"></td>
+                <td><a href="https://www.google.com/maps/search/?api=1&query={{ispark.park_name}}+ispark"
+                        target="_blank">Get Direction</a></td>
             </tr>
             {% endfor %}
         </tbody>
@@ -39,9 +73,109 @@
 </div>
 
 <script>
+    // Function to filter the table based on input values
+    function filterTable() {
+        // Ensure the status is updated before filtering
+        updateIsparkStatus();
+
+        const filterValues = {
+            parkName: document.getElementById('filter-park-name').value.toLowerCase(),
+            locationName: document.getElementById('filter-location-name').value.toLowerCase(),
+            parkDescription: document.getElementById('filter-park-description').value.toLowerCase(),
+            capacity: document.getElementById('filter-capacity').value.toLowerCase(),
+            county: document.getElementById('filter-county').value.toLowerCase(),
+            workingTime: document.getElementById('filter-working-time').value.toLowerCase(),
+            distance: parseFloat(document.getElementById('filter-distance').value), // Convert to number
+            status: document.getElementById('filter-status').value.toLowerCase()
+        };
+
+        const rows = document.querySelectorAll('#isparks-table tbody tr');
+
+        rows.forEach(row => {
+            const cells = row.querySelectorAll('td');
+            const parkName = cells[0].textContent.toLowerCase();
+            const locationName = cells[1].textContent.toLowerCase();
+            const parkDescription = cells[2].textContent.toLowerCase();
+            const capacity = cells[3].textContent.toLowerCase();
+            const county = cells[4].textContent.toLowerCase();
+            const workingTime = cells[5].textContent.toLowerCase();
+
+            // Extract and convert distance to number
+            const distanceText = cells[6].textContent.trim();
+            const distance = parseFloat(distanceText);
+
+            const status = cells[7].textContent.toLowerCase();
+
+            const matches = (
+                (filterValues.parkName === '' || parkName.includes(filterValues.parkName)) &&
+                (filterValues.locationName === '' || locationName.includes(filterValues.locationName)) &&
+                (filterValues.parkDescription === '' || parkDescription.includes(filterValues.parkDescription)) &&
+                (filterValues.capacity === '' || capacity.includes(filterValues.capacity)) &&
+                (filterValues.county === '' || county.includes(filterValues.county)) &&
+                (filterValues.workingTime === '' || workingTime.includes(filterValues.workingTime)) &&
+                (isNaN(filterValues.distance) || isNaN(distance) || distance <= filterValues.distance) && // Distance filter
+                (filterValues.status === '' || status.includes(filterValues.status)) // Status filter
+            );
+
+            row.style.display = matches ? '' : 'none';
+        });
+    }
+
     // Function to check if current time is within the interval
     function isCurrentTimeInInterval(interval) {
-        if(interval ==="24 Saat"){
+        if (interval === "24 Saat") {
+            return true;
+        }
+        const [start, end] = interval.split('-').map(time => time.trim());
+
+        // Get current time
+        const now = new Date();
+        const currentTime = now.getHours() * 60 + now.getMinutes(); // current time in minutes
+
+        // Parse start and end times
+        const [startHours, startMinutes] = start.split(':').map(Number);
+        const [endHours, endMinutes] = end.split(':').map(Number);
+
+        const startTime = startHours * 60 + startMinutes; // start time in minutes
+        const endTime = endHours * 60 + endMinutes; // end time in minutes
+
+        // Check if current time is within the interval
+        return startTime <= currentTime && currentTime <= endTime;
+    }
+
+    // Function to update status based on working time  
+    function updateIsparkStatus() {
+        const rows = document.querySelectorAll('#isparks-table tbody tr');
+
+        rows.forEach(row => {
+            const workingTime = row.querySelector('.working-time').textContent.trim();
+            const statusCell = row.querySelector('.status');
+
+            if (isCurrentTimeInInterval(workingTime)) {
+                statusCell.textContent = 'Open';
+                statusCell.style.color = 'green';
+            } else {
+                statusCell.textContent = 'Closed';
+                statusCell.style.color = 'rgb(239, 10, 10)';
+            }
+        });
+    }
+
+
+    // Run the status update function on page load and whenever a filter changes
+    document.addEventListener('DOMContentLoaded', () => {
+        updateIsparkStatus();
+        filterTable(); // Run filter on page load to ensure no rows are hidden if default filters are applied
+    });
+
+    // Add event listeners to filter inputs
+    document.querySelectorAll('#isparks-table thead input').forEach(input => {
+        input.addEventListener('input', filterTable);
+    });
+
+    // Function to check if current time is within the interval
+    function isCurrentTimeInInterval(interval) {
+        if (interval === "24 Saat") {
             return true;
         }
         const [start, end] = interval.split('-').map(time => time.trim());
@@ -80,7 +214,32 @@
     }
 
     // Run the status update function on page load
-    document.addEventListener('DOMContentLoaded', updateIsparkStatus);
+    document.addEventListener('DOMContentLoaded', () => {
+        updateIsparkStatus();
+        filterTable(); // Run filter on page load to ensure no rows are hidden if default filters are applied
+    });
 </script>
+
+<script>
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // Attach click event listener to each row
+        const rows = document.querySelectorAll('.clickable-row');
+        rows.forEach(row => {
+            row.addEventListener('click', function () {
+                // Get the URL from the data attribute
+                const url = row.getAttribute('data-url');
+                if (url) {
+                    // Redirect to the URL
+                    window.location.href = url;
+                }
+            });
+        });
+
+        updateIsparkStatus();  // Call the status update function if needed
+    });
+</script>
+
+
 
 {% endblock %}
