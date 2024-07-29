@@ -17,7 +17,6 @@ from tkintermapview import TkinterMapView
 app = Flask(__name__)
 
 # Define the PostgreSQL connection URL
-DATABASE_URL = "postgresql://postgres:Aseyfo58@localhost:5432/map_app"
 
 # Create an engine
 engine = create_engine(DATABASE_URL, echo=True)
