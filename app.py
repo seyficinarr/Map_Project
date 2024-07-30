@@ -1,5 +1,4 @@
 from flask import Flask, render_template, request
-import geocoder
 import psycopg2
 from geopy.distance import geodesic
 from geopy.geocoders import Nominatim
@@ -9,14 +8,14 @@ import requests
 from sqlalchemy import create_engine, Column, Integer, String, Float, Text
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.sql import func
-import tkinter as tk
-from tkintermapview import TkinterMapView
-import tkinter as tk
-from tkintermapview import TkinterMapView
+import folium
+
 
 app = Flask(__name__)
 
 # Define the PostgreSQL connection URL
+# Password should be changed
+DATABASE_URL = "postgresql://postgres:password@localhost:5432/map_app"
 
 # Create an engine
 engine = create_engine(DATABASE_URL, echo=True)
@@ -220,6 +219,52 @@ def ispark(id):
     lat = ispark.latitude
     lon = ispark.longitude
     return render_template("ispark.html", ispark=ispark, lat=lat, lon=lon)
+
+
+def colorOfMarker(argument):
+
+    # Define a dictionary mapping park types to colors
+    switcher = {
+        "AÇIK OTOPARK": "blue",
+        "MİNİBÜS PARK": "purple",
+        "TAKSİ PARK": "red",
+        "KAPALI OTOPARK": "black",
+        "YOL ÜSTÜ": "green",
+    }
+
+    # Return the color based on the park type or default to 'gray'
+    return switcher.get(argument, "gray")
+
+@app.route("/ispark_map/<int:id>")
+def ispark_map(id):
+    # Fetch the Ispark location from the database
+    ispark = session.query(Ispark).get(id)
+    if ispark:
+        lat = ispark.latitude
+        lon = ispark.longitude
+        color = colorOfMarker(ispark.park_type_desc)
+        ispark_name = ispark.park_name
+
+        # Create a Folium map centered at the Ispark location
+        map = folium.Map(location=[lat, lon], zoom_start=12)
+        distance = get_distance(
+            lat, lon, getCurrentLocation()[0], getCurrentLocation()[1]
+        )
+
+        fgp = folium.FeatureGroup(name="targetpoint")
+
+        fgp.add_child(folium.Marker([lat, lon],
+            popup=f"<h1>{ispark_name}</h1><img src='/static/images/ispark.png' width='100px'><p>{distance} kilometers away.</p>",
+            tooltip=f"<h4>{ispark.park_type_desc}</h4><p>Latitude: {lat}</p> <p>Longitude: {lon}</p>",
+            icon=folium.Icon(color=color),))
+        
+        map.add_child(fgp)
+        map.save("templates/ispark_map.html")
+
+
+        # Render the template with the Ispark data and map path
+        return render_template("ispark_map.html", ispark=ispark, lat=lat, lon=lon)
+    return "Ispark location not found", 404
 
 
 if __name__ == "__main__":

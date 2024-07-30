@@ -10,11 +10,15 @@
     <p><strong>County:</strong> {{ ispark.county_name }}</p>
     <p><strong>Working Time:</strong> {{ ispark.working_time }}</p>
     <p><strong>Capacity:</strong> {{ ispark.capacity_of_park }}</p>
-    <p><a href="https://maps.google.com/?q={{lat}},{{lon}}" target="_blank">Open the ispark on the map</p>
+    <p><a href="https://maps.google.com/?q={{lat}},{{lon}}" target="_blank">Open the ispark on google maps</p>
     </p>
     <p><a href="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint={{lat}},{{lon}}
 " target="_blank">See the park on pano viewpoint</p>
     </p>
+    <p><a href="{{ url_for('ispark_map', id=ispark.id) }}" target="_blank">Open the ispark on OpenStreetMap</a></p>
+    
+    
+
 </div>
 
 
