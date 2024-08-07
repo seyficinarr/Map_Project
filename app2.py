@@ -73,7 +73,7 @@ def checkHour(interval):
 
 
 url = "https://www.googleapis.com/geolocation/v1/geolocate?key={}".format(
-    "AIzaSyBTDU0W-s7dcbVOcSjkKQ71kPmr33kKgMc"
+    "google-api-key"
 )
 
 response = requests.post(url)
