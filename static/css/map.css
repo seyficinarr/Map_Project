@@ -1,0 +1,164 @@
+html,
+body,
+#viewDiv {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+#closestIspark {
+    position: absolute;
+    top: 10px;
+    left: 60px;
+    background: rgba(255, 255, 255, 0);
+    padding: 20px;
+    border-radius: 5px;
+    z-index: 99;
+    width: 150px;
+    height: 25px;
+}
+
+#showAllIsparks {
+    position: absolute;
+    top: 60px;
+    left: 80px;
+    z-index: 99;
+}
+
+#filterDiv {
+    position: absolute;
+    top: 100px;
+    left: 10px;
+    background: white;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    z-index: 99;
+    width: 250px;
+    transition: width 0.3s, height 0.3s, top 0.3s;
+}
+
+#filterDiv.collapsed {
+    width: 50px;
+    height: 50px;
+    padding: 0;
+    top: 100px;
+    left: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: transparent;
+    border: none;
+}
+
+#filterDiv.collapsed .icon {
+    display: none;
+}
+
+#filterDiv .toggleButton {
+    position: absolute;
+    top: 8px;
+    right: 5px;
+    width: 30px;
+    height: 30px;
+    background-color: #0078d4;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 30px;
+    font-size: 18px;
+    z-index: 100;
+}
+
+#filterDiv label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    display: block;
+    transition: opacity 0.3s;
+}
+
+#filterDiv.collapsed label {
+    opacity: 0;
+}
+
+#filterDiv select,
+#filterDiv input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+#filterDiv select {
+    height: 150px;
+    overflow-y: auto;
+}
+
+#filterDiv button {
+    display: block;
+    margin: 10px 0;
+    padding: 10px;
+    border: none;
+    border-radius: 4px;
+    background-color: #0078d4;
+    color: white;
+}
+
+#filterDiv button:hover {
+    background-color: #005a9e;
+}
+
+#filterDiv.collapsed .content {
+    display: none;
+}
+
+#filterDiv.collapsed .icon {
+    font-size: 24px;
+    line-height: 50px;
+}
+#map_explainer {
+    box-shadow: 0 2px 4px;
+    position: absolute;
+    font-size: 13px;
+    bottom: 10px;
+    left: 500px;
+    background: white;
+    padding: 20px;
+    border-radius: 5px;
+    z-index: 99;
+    width: 250px;
+    background-color: rgba(255, 255, 255, 0.507);
+    color: black;
+    /* Ensure text is readable */
+    padding: 20px;
+    /* Add some space around text */
+    border: 1px solid black;
+    /* Add border to see its boundary */
+
+}
+
+#info {
+    position: absolute;
+    font-size: 13px;
+    bottom: 10px;
+    left: 10px;
+    background: white;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    z-index: 99;
+    width: 250px;
+    background-color: rgba(45, 247, 210, 0.733);
+    color: black;
+    /* Ensure text is readable */
+    padding: 20px;
+    /* Add some space around text */
+    border: 1px solid black;
+    /* Add border to see its boundary */
+
+}

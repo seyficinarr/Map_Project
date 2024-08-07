@@ -15,7 +15,7 @@ app = Flask(__name__)
 
 # Define the PostgreSQL connection URL
 # Password should be changed
-DATABASE_URL = "postgresql://postgres:password@localhost:5432/map_app"
+DATABASE_URL = "postgresql://postgres:Aseyfo58@localhost:5432/map_app"
 
 # Create an engine
 engine = create_engine(DATABASE_URL, echo=True)
@@ -40,6 +40,21 @@ class Ispark(Base):
     latitude = Column(Float)
     location = Column(Text)
 
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "park_name": self.park_name,
+            "location_name": self.location_name,
+            "park_type_id": self.park_type_id,
+            "park_type_desc": self.park_type_desc,
+            "capacity_of_park": self.capacity_of_park,
+            "working_time": self.working_time,
+            "county_name": self.county_name,
+            "longitude": self.longitude,
+            "latitude": self.latitude,
+            "location": self.location,
+        }
+
 
 # Create a session
 Session = sessionmaker(bind=engine)
@@ -63,6 +78,7 @@ def checkHour(interval):
 # def getCurrentLocation():
 #     g = geocoder.ip("me")
 #     return g.latlng if g.latlng else (None, None)
+
 
 def getCurrentLocation():
     return (40.955857, 29.117504)
@@ -121,7 +137,6 @@ def get_distance(lat1, lon1, lat2, lon2):
         return None
     except TypeError as e:
         print(f"Type error: {e}")
-        return None
 
 
 def getClosestIspark():
@@ -213,6 +228,7 @@ def reverse_geocode_route():
             address = reverse_geocode(latitude, longitude)
     return render_template("reverse_geocode.html", address=address)
 
+
 @app.route("/ispark/<int:id>")
 def ispark(id):
     ispark = session.query(Ispark).get(id)
@@ -235,36 +251,43 @@ def colorOfMarker(argument):
     # Return the color based on the park type or default to 'gray'
     return switcher.get(argument, "gray")
 
+
 @app.route("/ispark_map/<int:id>")
 def ispark_map(id):
-    # Fetch the Ispark location from the database
     ispark = session.query(Ispark).get(id)
     if ispark:
         lat = ispark.latitude
         lon = ispark.longitude
-        color = colorOfMarker(ispark.park_type_desc)
-        ispark_name = ispark.park_name
-
-        # Create a Folium map centered at the Ispark location
-        map = folium.Map(location=[lat, lon], zoom_start=12)
+        fAddress= reverse_geocode(lat, lon)
         distance = get_distance(
             lat, lon, getCurrentLocation()[0], getCurrentLocation()[1]
         )
 
-        fgp = folium.FeatureGroup(name="targetpoint")
+        # Convert the Ispark object to a dictionary
+        ispark_data = {
+            "id": ispark.id,
+            "park_name": ispark.park_name,
+            "latitude": ispark.latitude,
+            "longitude": ispark.longitude,
+            "park_type_desc": ispark.park_type_desc,
+            "ispark_loc": ispark.location,
+        }
 
-        fgp.add_child(folium.Marker([lat, lon],
-            popup=f"<h1>{ispark_name}</h1><img src='/static/images/ispark.png' width='100px'><p>{distance} kilometers away.</p>",
-            tooltip=f"<h4>{ispark.park_type_desc}</h4><p>Latitude: {lat}</p> <p>Longitude: {lon}</p>",
-            icon=folium.Icon(color=color),))
-        
-        map.add_child(fgp)
-        map.save("templates/ispark_map.html")
-
-
-        # Render the template with the Ispark data and map path
-        return render_template("ispark_map.html", ispark=ispark, lat=lat, lon=lon)
+        return render_template("ispark_map.html", fAddress=fAddress, ispark=ispark_data, distance=distance)
     return "Ispark location not found", 404
+
+
+@app.route("/isparks_map")
+def isparks_map():
+    isparks = session.query(Ispark).all()
+
+    # Convert the Ispark objects to dictionaries
+    isparks_dict = [ispark.to_dict() for ispark in isparks]
+
+    distances = [get_distance(getCurrentLocation()[0], getCurrentLocation()[1], ispark.latitude, ispark.longitude) for ispark in isparks]
+    
+
+    return render_template("isparks_map.html", isparks=isparks_dict, distances=distances)
 
 
 if __name__ == "__main__":

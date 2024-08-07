@@ -5,29 +5,78 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Current Location</title>
+    <script src="https://js.arcgis.com/4.20/"></script>
+    <script>
+        require([
+            'esri/geometry/Point',
+            'esri/geometry/SpatialReference',
+            'esri/geometry/Extent',
+            'esri/geometry/Geometry'
+        ], function (Point, SpatialReference, Extent, Geometry) {
+            // This is just an example, ArcGIS is not typically used to get current location directly.
+            // You might need to use HTML5 Geolocation API or another service for that purpose.
+
+            function getLocation() {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(function (position) {
+                        const latitude = position.coords.latitude;
+                        const longitude = position.coords.longitude;
+
+                        // Update the HTML content with latitude and longitude
+                        document.getElementById('latitude').textContent = 'Latitude: ' + latitude;
+                        document.getElementById('longitude').textContent = 'Longitude: ' + longitude;
+
+                        // Fetch address using the reverse geocoding service
+                        const apiKey = 'AIzaSyBTDU0W-s7dcbVOcSjkKQ71kPmr33kKgMc';
+                        const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${apiKey}`;
+
+                        fetch(url)
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.status === 'OK') {
+                                    const results = data.results;
+                                    if (results.length > 0) {
+                                        console.log(results[0]);
+                                        console.log(results[0].formatted_address);
+                                        const address = results[0].formatted_address;
+                                        console.log('Address:', address);
+                                        // Optionally update HTML with address
+                                        document.getElementById('address').textContent = 'Address: ' + address;
+                                    } else {
+                                        console.log('No results found');
+                                    }
+                                } else {
+                                    console.log('Geocoding API error:', data.status);
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                            });
+                    }, function (error) {
+                        console.error('Geolocation error:', error);
+                        document.getElementById('location').textContent = 'Error retrieving location.';
+                    });
+                } else {
+                    document.getElementById('location').textContent = 'Geolocation is not supported by this browser.';
+                }
+            }
+
+            // Call the function to get location
+            getLocation();
+        });
+    </script>
 </head>
 
 <body>
     <header>
         <h1>Current Location</h1>
-        
     </header>
     <main>
-        {% if latitude is not none %}
-        <p>Latitude: {{ latitude }}</p>
-        <p>Longitude: {{ longitude }}</p>
-        <p>Country: {{ address['country'] }}</p>
-        <p>State: {{ address['state'] }}</p>
-        <p>City: {{ address['city'] }}</p>
-        <p>Suburb: {{ address['suburb'] }}</p>
-        <p>Road: {{ address['road'] }}</p>
-        <p>House Number: {{ address['house_number'] }}</p>
-        {% else %}
-        <p>Could not determine your location.</p>
-        {% endif %}
+        <p id="latitude">Latitude: </p>
+        <p id="longitude">Longitude: </p>
+        <p id="address">Address: </p>
+        <!-- Add more fields as needed, the values will be filled by JavaScript -->
     </main>
 </body>
 
-</html>
-
-{%endblock%}
+{% endblock %}

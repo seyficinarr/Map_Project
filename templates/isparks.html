@@ -13,27 +13,23 @@
                     <input type="text" id="filter-park-name" class="form-control" placeholder="Filter by Park Name">
                 </th>
                 <th>
-                    Location Name
-                    <input type="text" id="filter-location-name" class="form-control"
-                        placeholder="Filter by Location Name">
-                </th>
-                <th>
-                    Park Description
-                    <input type="text" id="filter-park-description" class="form-control"
-                        placeholder="Filter by Park Description">
+                    County
+                    <input type="text" id="filter-county-name" class="form-control"
+                        placeholder="Filter by County Name">
                 </th>
                 <th>
                     Capacity
-                    <input type="number" id="filter-capacity" class="form-control" placeholder="Filter by Capacity">
-                </th>
-                <th>
-                    County
-                    <input type="text" id="filter-county" class="form-control" placeholder="Filter by County">
+                    <input type="text" id="filter-capacity" class="form-control"
+                        placeholder="Filter by Park Capacity">
                 </th>
                 <th>
                     Working Time
-                    <input type="text" id="filter-working-time" class="form-control"
+                    <input type="text" id="filter-work_hours" class="form-control"
                         placeholder="Filter by Working Time">
+                </th>
+                <th>
+                    Park Type
+                    <input type="text" id="filter-park-type" class="form-control" placeholder="Filter by Park Type">
                 </th>
                 <th>
                     Distance (km)
@@ -43,28 +39,33 @@
                     Status
                     <input type="text" id="filter-status" class="form-control" placeholder="Filter by Status">
                 </th>
+                <th>
+                    Empty Capacity
+                    <input type="text" id="filter-empty-capacity" class="form-control" placeholder="Filter by Empty Capacity">
+                </th>
+                <th>Last Updated Date</th>
                 <th>Get Direction</th>
             </tr>
         </thead>
         <tbody>
             {% for ispark in isparks_list %}
-            <tr>
-                <td data-url="{{ url_for('ispark', id=ispark.id) }}" class="clickable-row">{{ ispark.park_name }}</td>
-                <td data-url="{{ url_for('ispark', id=ispark.id) }}" class="clickable-row">{{ ispark.location_name }}
+            <tr id="{{ispark.id}}">
+                <td data-url="{{ url_for('ispark', id=ispark.id) }}" class="clickable-row">{{ ispark.name }}</td>
+                <td data-url="{{ url_for('ispark', id=ispark.id) }}" class="clickable-row">{{ ispark.district }}</td>
+                <td data-url="{{ url_for('ispark', id=ispark.id) }}" class="clickable-row">{{ ispark.capacity }}
                 </td>
-                <td data-url="{{ url_for('ispark', id=ispark.id) }}" class="clickable-row">{{ ispark.park_type_desc }}
+                <td data-url="{{ url_for('ispark', id=ispark.id) }}" class="clickable-row">{{ ispark.work_hours }}
                 </td>
                 <td data-url="{{ url_for('ispark', id=ispark.id) }}" class="clickable-row" id="centered">{{
-                    ispark.capacity_of_park }}</td>
-                <td data-url="{{ url_for('ispark', id=ispark.id) }}" class="clickable-row">{{ ispark.county_name }}</td>
-                <td data-url="{{ url_for('ispark', id=ispark.id) }}" class="clickable-row working-time">{{
-                    ispark.working_time }}</td>
-                <td data-url="{{ url_for('ispark', id=ispark.id) }}" class="clickable-row working-time" id="centered">
-                    {{ get_distance(ispark.latitude, ispark.longitude, getCurrentLocation()[0], getCurrentLocation()[1])
+                    ispark.park_type }}</td>
+                <td data-url="{{ url_for('ispark', id=ispark.id) }}" class="clickable-row work_hours" id="centered">
+                    {{ get_distance(ispark.lat, ispark.lng, curLocation[0], curLocation[1])
                     }}
                 </td>
-                <td data-url="{{ url_for('ispark', id=ispark.id) }}" class="clickable-row working-time status"></td>
-                <td><a href="https://www.google.com/maps/search/?api=1&query={{ispark.park_name}}+ispark"
+                <td data-url="{{ url_for('ispark', id=ispark.id) }}" class="clickable-row work_hours status"></td>
+                <td data-url="{{ url_for('ispark', id=ispark.id) }}" class="clickable-row empty_capacity"></td>
+                <td data-url="{{ url_for('ispark', id=ispark.id) }}" class="clickable-row update_date"></td>
+                <td><a href="https://www.google.com/maps?q={ispark.lat},{ispark.lon}"
                         target="_blank">Get Direction</a></td>
             </tr>
             {% endfor %}
@@ -77,16 +78,17 @@
     function filterTable() {
         // Ensure the status is updated before filtering
         updateIsparkStatus();
+        updateIsparkEmptyCapacity();
 
         const filterValues = {
             parkName: document.getElementById('filter-park-name').value.toLowerCase(),
-            locationName: document.getElementById('filter-location-name').value.toLowerCase(),
-            parkDescription: document.getElementById('filter-park-description').value.toLowerCase(),
+            county: document.getElementById('filter-county-name').value.toLowerCase(),
             capacity: document.getElementById('filter-capacity').value.toLowerCase(),
-            county: document.getElementById('filter-county').value.toLowerCase(),
-            workingTime: document.getElementById('filter-working-time').value.toLowerCase(),
+            workingTime: document.getElementById('filter-work_hours').value.toLowerCase(),
+            parkType: document.getElementById('filter-park-type').value.toLowerCase(),
             distance: parseFloat(document.getElementById('filter-distance').value), // Convert to number
-            status: document.getElementById('filter-status').value.toLowerCase()
+            status: document.getElementById('filter-status').value.toLowerCase(),
+            emptyCapacity: document.getElementById('filter-empty-capacity').value.toLowerCase(),
         };
 
         const rows = document.querySelectorAll('#isparks-table tbody tr');
@@ -94,77 +96,41 @@
         rows.forEach(row => {
             const cells = row.querySelectorAll('td');
             const parkName = cells[0].textContent.toLowerCase();
-            const locationName = cells[1].textContent.toLowerCase();
-            const parkDescription = cells[2].textContent.toLowerCase();
-            const capacity = cells[3].textContent.toLowerCase();
-            const county = cells[4].textContent.toLowerCase();
-            const workingTime = cells[5].textContent.toLowerCase();
+            const county = cells[1].textContent.toLowerCase();
+            const capacity = cells[2].textContent.toLowerCase();
+            const workingTime = cells[3].textContent.toLowerCase();
+            const parkType = cells[4].textContent.toLowerCase();
 
             // Extract and convert distance to number
-            const distanceText = cells[6].textContent.trim();
+            const distanceText = cells[5].textContent.trim();
             const distance = parseFloat(distanceText);
 
-            const status = cells[7].textContent.toLowerCase();
+            const status = cells[6].textContent.toLowerCase();
+            const emptyCapacityText = cells[7].textContent.trim().toLowerCase(); // Read empty capacity
 
             const matches = (
                 (filterValues.parkName === '' || parkName.includes(filterValues.parkName)) &&
-                (filterValues.locationName === '' || locationName.includes(filterValues.locationName)) &&
-                (filterValues.parkDescription === '' || parkDescription.includes(filterValues.parkDescription)) &&
+                (filterValues.parkType === '' || parkType.includes(filterValues.parkType)) &&
                 (filterValues.capacity === '' || capacity.includes(filterValues.capacity)) &&
                 (filterValues.county === '' || county.includes(filterValues.county)) &&
                 (filterValues.workingTime === '' || workingTime.includes(filterValues.workingTime)) &&
                 (isNaN(filterValues.distance) || isNaN(distance) || distance <= filterValues.distance) && // Distance filter
-                (filterValues.status === '' || status.includes(filterValues.status)) // Status filter
+                (filterValues.status === '' || status.includes(filterValues.status)) &&
+                (filterValues.emptyCapacity === '' || emptyCapacityText.includes(filterValues.emptyCapacity)) // Empty Capacity filter
             );
 
             row.style.display = matches ? '' : 'none';
         });
     }
 
-    // Function to check if current time is within the interval
-    function isCurrentTimeInInterval(interval) {
-        if (interval === "24 Saat") {
-            return true;
-        }
-        const [start, end] = interval.split('-').map(time => time.trim());
 
-        // Get current time
-        const now = new Date();
-        const currentTime = now.getHours() * 60 + now.getMinutes(); // current time in minutes
-
-        // Parse start and end times
-        const [startHours, startMinutes] = start.split(':').map(Number);
-        const [endHours, endMinutes] = end.split(':').map(Number);
-
-        const startTime = startHours * 60 + startMinutes; // start time in minutes
-        const endTime = endHours * 60 + endMinutes; // end time in minutes
-
-        // Check if current time is within the interval
-        return startTime <= currentTime && currentTime <= endTime;
-    }
-
-    // Function to update status based on working time  
-    function updateIsparkStatus() {
-        const rows = document.querySelectorAll('#isparks-table tbody tr');
-
-        rows.forEach(row => {
-            const workingTime = row.querySelector('.working-time').textContent.trim();
-            const statusCell = row.querySelector('.status');
-
-            if (isCurrentTimeInInterval(workingTime)) {
-                statusCell.textContent = 'Open';
-                statusCell.style.color = 'green';
-            } else {
-                statusCell.textContent = 'Closed';
-                statusCell.style.color = 'rgb(239, 10, 10)';
-            }
-        });
-    }
 
 
     // Run the status update function on page load and whenever a filter changes
     document.addEventListener('DOMContentLoaded', () => {
         updateIsparkStatus();
+        updateIsparkEmptyCapacity();
+        updateDate();
         filterTable(); // Run filter on page load to ensure no rows are hidden if default filters are applied
     });
 
@@ -173,73 +139,155 @@
         input.addEventListener('input', filterTable);
     });
 
-    // Function to check if current time is within the interval
-    function isCurrentTimeInInterval(interval) {
-        if (interval === "24 Saat") {
-            return true;
-        }
-        const [start, end] = interval.split('-').map(time => time.trim());
-
-        // Get current time
-        const now = new Date();
-        const currentTime = now.getHours() * 60 + now.getMinutes(); // current time in minutes
-
-        // Parse start and end times
-        const [startHours, startMinutes] = start.split(':').map(Number);
-        const [endHours, endMinutes] = end.split(':').map(Number);
-
-        const startTime = startHours * 60 + startMinutes; // start time in minutes
-        const endTime = endHours * 60 + endMinutes; // end time in minutes
-
-        // Check if current time is within the interval
-        return startTime <= currentTime && currentTime <= endTime;
-    }
-
     // Function to update status based on working time  
-    function updateIsparkStatus() {
-        const rows = document.querySelectorAll('#isparks-table tbody tr');
+   function updateIsparkStatus() {
+        fetch('https://api.ibb.gov.tr/ispark/Park') // Replace with your JSON URL
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok ' + response.statusText);
+                }
+                return response.json(); // Parse JSON data from the response
+            })
+            .then(data => {
 
-        rows.forEach(row => {
-            const workingTime = row.querySelector('.working-time').textContent.trim();
-            const statusCell = row.querySelector('.status');
+                // Assuming data is an array of park objects
+                const isparks = data; // Use the data directly as it's an array
+                const rows = document.querySelectorAll('#isparks-table tbody tr');
 
-            if (isCurrentTimeInInterval(workingTime)) {
-                statusCell.textContent = 'Open';
-                statusCell.style.color = 'green';
-            } else {
-                statusCell.textContent = 'Closed';
-                statusCell.style.color = 'rgb(239, 10, 10)';
-            }
-        });
+                rows.forEach(row => {
+                    const id = row.id;
+                    const statusCell = row.querySelector('.status');
+
+                    // Ensure data is an array and find the object with the matching parkID
+                    const obj = isparks.find(result => result.parkID == id);
+
+                    if (obj) {
+                        if (obj.isOpen) {
+                            statusCell.textContent = 'Open';
+                            statusCell.style.color = 'green';
+                        } else {
+                            statusCell.textContent = 'Closed';
+                            statusCell.style.color = 'rgb(239, 10, 10)';
+                        }
+                    } else {
+                        // Handle case where no matching object is found
+                        statusCell.textContent = 'Data not available';
+                        statusCell.style.color = 'gray';
+                    }
+                });
+            })
+            .catch(error => {
+                console.error('There has been a problem with your fetch operation:', error);
+            });
     }
 
-    // Run the status update function on page load
-    document.addEventListener('DOMContentLoaded', () => {
-        updateIsparkStatus();
-        filterTable(); // Run filter on page load to ensure no rows are hidden if default filters are applied
-    });
-</script>
+    function updateIsparkEmptyCapacity() {
+            fetch('https://api.ibb.gov.tr/ispark/Park') // Replace with your JSON URL
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok ' + response.statusText);
+                    }
+                    return response.json(); // Parse JSON data from the response
+                })
+                .then(data => {
 
-<script>
+                    // Assuming data is an array of park objects
+                    const isparks = data; // Use the data directly as it's an array
+                    const rows = document.querySelectorAll('#isparks-table tbody tr');
+
+                    rows.forEach(row => {
+                        const id = row.id;
+                        const statusCell = row.querySelector('.status');
+                        const emptyCell = row.querySelector('.empty_capacity');
+
+                        if(statusCell.textContent === "Open"){
+                            const obj = isparks.find(result => result.parkID == id);
+                            emptyCell.textContent = obj.emptyCapacity;
+                        }
+                        else{
+                            emptyCell.textContent = "-"
+                        }
+                        
+                    });
+                })
+                .catch(error => {
+                    console.error('There has been a problem with your fetch operation:', error);
+                });
+        }
+
+    function updateDate() {
+        fetch('https://api.ibb.gov.tr/ispark/Park') // Replace with your JSON URL
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok ' + response.statusText);
+                }
+                return response.json(); // Parse JSON data from the response
+            })
+            .then(data => {
+                const isparks = data; // Use the data directly as it's an array
+
+                const rows = document.querySelectorAll('#isparks-table tbody tr');
+
+                // Create a map for faster lookup
+                const isparkMap = new Map(isparks.map(ispark => [ispark.parkID, ispark]));
+
+                rows.forEach(row => {
+                    const id = parseInt(row.id); // Convert to number if needed
+                    const dateCell = row.querySelector('.update_date');
+
+                    if (isparkMap.has(id)) {
+                        const obj = isparkMap.get(id);
+                        fetch(`https://api.ibb.gov.tr/ispark/ParkDetay?id=${obj.parkID}`) // Correct URL construction
+                            .then(response => {
+                                if (!response.ok) {
+                                    throw new Error('Network response was not ok ' + response.statusText);
+                                }
+                                return response.json(); // Parse JSON data from the response
+                            })
+                            .then(data2 => {
+                                
+                                if (data2.length > 0) {
+                                    const ispark = data2[0];
+                                    dateCell.textContent = ispark.updateDate; // Update cell content
+                                } else {
+                                    
+                                    dateCell.textContent = 'No data available'; // Handle case with no data
+                                }
+                            })
+                            .catch(error => {
+                                console.error('There has been a problem with your fetch operation:', error);
+                            });
+                    } else {
+                        dateCell.textContent = 'Data not found'; // Handle case where no matching object is found
+                    }
+                });
+            })
+            .catch(error => {
+                console.error('There has been a problem with your fetch operation:', error);
+            });
+    }
+
+
+
 
     document.addEventListener('DOMContentLoaded', function () {
-        // Attach click event listener to each row
-        const rows = document.querySelectorAll('.clickable-row');
-        rows.forEach(row => {
-            row.addEventListener('click', function () {
-                // Get the URL from the data attribute
-                const url = row.getAttribute('data-url');
-                if (url) {
-                    // Redirect to the URL
-                    window.location.href = url;
-                }
+            // Attach click event listener to each row
+            const rows = document.querySelectorAll('.clickable-row');
+            rows.forEach(row => {
+                row.addEventListener('click', function () {
+                    // Get the URL from the data attribute
+                    const url = row.getAttribute('data-url');
+                    if (url) {
+                        // Redirect to the URL
+                        window.location.href = url;
+                    }
+                });
             });
+
+            
         });
 
-        updateIsparkStatus();  // Call the status update function if needed
-    });
+    
 </script>
-
-
 
 {% endblock %}

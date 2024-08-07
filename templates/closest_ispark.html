@@ -11,22 +11,155 @@
 
     <main>
         <h2>Closest Ispark Location</h2>
-        {% if closest_ispark %}
-        <p>Park Name: {{ closest_ispark.name }}</p>
-        <p>Latitude: {{ closest_ispark.latitude }}</p>
-        <p>Longitude: {{ closest_ispark.longitude }}</p>
-        <p>Distance: {{ distance }} km</p>
-        <a href="https://maps.google.com/?q={{closest_ispark.latitude}},{{closest_ispark.longitude}}"
-            target="_blank">Open the ispark on the map</a>
-        <p><a href="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint={{closest_ispark.latitude}},{{closest_ispark.longitude}}
-        " target="_blank">See on pano viewpoint</p>
+        <div class="container" id="info"></div>
+        <div class="container" id="links"></div>
 
-        {% else %}
-        <p>No nearby Ispark found.</p>
-        {% endif %}
-
+        
     </main>
-</body>
 
-</html>
-{% endblock %}
+    <script>
+        const isparks = {{ isparks_dict | tojson }};
+
+        function getCurrentLocation(callback) {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const lat = position.coords.latitude;
+                        const lon = position.coords.longitude;
+                        callback(lat, lon);
+                    },
+                    (error) => {
+                        console.error('Error getting location:', error);
+                        callback(null, null);
+                    }
+                );
+            } else {
+                console.error('Geolocation is not supported by this browser.');
+                callback(null, null);
+            }
+        }
+
+        function haversineDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; // Radius of Earth in kilometers
+            const dLat = toRad(lat2 - lat1);
+            const dLon = toRad(lon2 - lon1);
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c; // Distance in kilometers
+        }
+
+        function toRad(degrees) {
+            return degrees * (Math.PI / 180);
+        }
+
+        function getClosestIspark(lat, lon) {
+            let distance = Infinity;
+            let closestIspark = null;
+
+            for (const ispark of isparks) {
+                const isparkLat = ispark.lat;
+                const isparkLng = ispark.lng;
+
+                const currentDistance = haversineDistance(isparkLat, isparkLng, lat, lon);
+                if (currentDistance < distance) {
+                    closestIspark = ispark;
+                    distance = currentDistance;
+                }
+            }
+            console.log(closestIspark);
+            updateInfo(closestIspark.id);
+            return { closestIspark, distance };
+        }
+
+        // Get current location and find the closest Ispark
+        getCurrentLocation((lat, lon) => {
+            if (lat !== null && lon !== null) {
+                const result = getClosestIspark(lat, lon);
+                const closestIspark = result.closestIspark;
+                const distance = result.distance;
+
+                if (closestIspark) {
+                    document.getElementById("info").innerHTML +=
+                        `<p><strong>Name: </strong>${closestIspark.name}</p>` +
+                        `<p><strong>Type: </strong>${closestIspark.park_type}</p>` +
+                        `<p><strong>Capacity: </strong>${closestIspark.capacity}</p>` +
+                        `<p><strong>District: </strong>${closestIspark.district}</p>` +
+                        `<p><strong>Work Hours: </strong>${closestIspark.work_hours}</p>` +
+                        `<p><strong>Distance: </strong>${distance.toFixed(2)} km</p>`;
+                    document.getElementById("links").innerHTML +=
+                        `<p><a href="https://maps.google.com/?q=${closestIspark.lat},${closestIspark.lng}" target="_blank">Open the ispark on Google Maps</a></p>` +
+                        `<p><a href="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${closestIspark.lat},${closestIspark.lng}" target="_blank">See the park on pano viewpoint</a></p>`;
+
+                } else {
+                    document.getElementById("info").innerHTML =
+                        `<p>No Ispark locations found.</p>`;
+                }
+            } else {
+                document.getElementById("info").innerHTML =
+                    `<p>Unable to retrieve location.</p>`;
+            }
+        });
+
+        function updateInfo(id) {
+
+                
+                let emptyCapacity = "";
+                fetch(`https://api.ibb.gov.tr/ispark/ParkDetay?id=${id}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok ' + response.statusText);
+                        }
+                        return response.json(); // Parse JSON data from the response
+                    })
+                    .then(data => {
+                        const detail = data[0];
+                        emptyCapacity = detail.emptyCapacity;
+                        const updateDate = detail.updateDate;
+                        const tariff = detail.tariff;
+                        const address = detail.address;
+                        document.getElementById("info").innerHTML += `
+                        <p><strong>Empty Capacity:</strong> ${emptyCapacity}</p>
+                        <p><strong>Update Date:</strong> ${updateDate}</p>
+                        <p><strong>Tariff:</strong> ${tariff}</p>
+                        <p><strong>Address:</strong> ${address}</p>
+                    `;
+                    })
+
+                fetch('https://api.ibb.gov.tr/ispark/Park') 
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok ' + response.statusText);
+                        }
+                        return response.json(); // Parse JSON data from the response
+                    })
+                    .then(data => {
+
+                        const isparks = data;
+                        const obj = isparks.find(result => result.parkID == id);
+                        console.log(obj);
+                        if (obj) {
+                            if (obj.isOpen && emptyCapacity > 0) {
+                                document.getElementById("info").innerHTML += `<p style="color: green; font-size:25px"><strong>The ispark is available</strong></p>`;
+                            }
+                            else if (!obj.isOpen) {
+                                document.getElementById("info").innerHTML += `<p style="color: gray; font-size:25px"><strong>The ispark is closed at the moment</strong></p>`;
+                            }
+                            else {
+                                document.getElementById("info").innerHTML += `<p style="color: red; font-size:25px"><strong>There is no available space at the ispark</strong></p>`;
+                            }
+                        }
+                        else {
+                            document.getElementById("info").innerHTML += `<p style="color: black; font-size:25px"><strong>The data is not available.</strong></p>`;
+                        }
+
+                    })
+
+            }
+
+
+            
+    </script>
+
+    {% endblock %}

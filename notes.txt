@@ -1,0 +1,4 @@
+Ispark API usage documentation link:
+https://data.ibb.gov.tr/en/dataset/ispark-otopark-detay-bilgileri-web-servisi/resource/ce9828ff-7247-465e-acec-ae5c1b3bf28c
+
+
