@@ -8,8 +8,6 @@ import requests
 from sqlalchemy import create_engine, Column, Integer, String, Float, Text
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.sql import func
-import folium
-
 
 app = Flask(__name__)
 
@@ -26,32 +24,28 @@ Base = declarative_base()
 
 # Define the Ispark model
 class Ispark(Base):
-    __tablename__ = "ispark"
+    __tablename__ = "ispark_second"
 
     id = Column(Integer, primary_key=True)  # Add a primary key
-    park_name = Column(String(255))
-    location_name = Column(String(255))
-    park_type_id = Column(String(255))
-    park_type_desc = Column(String(255))
-    capacity_of_park = Column(Integer)
-    working_time = Column(String(255))
-    county_name = Column(String(255))
-    longitude = Column(Float)
-    latitude = Column(Float)
+    name = Column(String(255))
+    lat = Column(Float)
+    lng = Column(Float)
+    capacity = Column(Integer)
+    work_hours = Column(String(255))
+    park_type = Column(String(255))
+    district = Column(String(255))
     location = Column(Text)
 
     def to_dict(self):
         return {
             "id": self.id,
-            "park_name": self.park_name,
-            "location_name": self.location_name,
-            "park_type_id": self.park_type_id,
-            "park_type_desc": self.park_type_desc,
-            "capacity_of_park": self.capacity_of_park,
-            "working_time": self.working_time,
-            "county_name": self.county_name,
-            "longitude": self.longitude,
-            "latitude": self.latitude,
+            "name": self.name,
+            "lat": self.lat,
+            "lng": self.lng,
+            "capacity": self.capacity,
+            "work_hours": self.work_hours,
+            "park_type": self.park_type,
+            "district": self.district,
             "location": self.location,
         }
 
@@ -74,14 +68,10 @@ def checkHour(interval):
     return False
 
 
-# Functions to handle geocoding and distance calculation
-# def getCurrentLocation():
-#     g = geocoder.ip("me")
-#     return g.latlng if g.latlng else (None, None)
+
+curLocation = (40.955857, 29.117504)
 
 
-def getCurrentLocation():
-    return (40.955857, 29.117504)
 
 
 def reverse_geocode(latitude, longitude):
@@ -140,21 +130,22 @@ def get_distance(lat1, lon1, lat2, lon2):
 
 
 def getClosestIspark():
-    curLoc = getCurrentLocation()
-    if curLoc[0] is None or curLoc[1] is None:
+    global curLocation
+    if curLocation[0] is None or curLocation[1] is None:
         return None
-    curLatitude, curLongitude = curLoc
+    curLatitude = curLocation[0]
+    curLongitude = curLocation[1]
     connection = psycopg2.connect(
         host="localhost", database="map_app", user="postgres", password="Aseyfo58"
     )
     cursor = connection.cursor()
-    select_query = "SELECT park_name, latitude, longitude FROM ispark"
+    select_query = "SELECT name, lat, lng FROM ispark_second"
     min_distance = float("inf")
     min_distance_ispark = None
     cursor.execute(select_query)
     records = cursor.fetchall()
     for r in records:
-        park_name, ispark_latitude, ispark_longitude = r
+        name, ispark_latitude, ispark_longitude = r
         if (
             ispark_latitude > 90
             or ispark_latitude < -90
@@ -181,6 +172,7 @@ def index():
 
 @app.route("/isparks")
 def isparks():
+    global curLocation
     isparks_list = session.query(Ispark).all()
     now = datetime.now()
     return render_template(
@@ -188,13 +180,13 @@ def isparks():
         now=now,
         isparks_list=isparks_list,
         get_distance=get_distance,
-        getCurrentLocation=getCurrentLocation,
+        curLocation=curLocation,
     )
-
 
 @app.route("/current_location")
 def current_location_page():
-    location = getCurrentLocation()
+    global curLocation
+    location = curLocation
     address = reverse_geocode(location[0], location[1])
     return render_template(
         "current_location.html",
@@ -203,19 +195,11 @@ def current_location_page():
         address=address,
     )
 
-
 @app.route("/closest_ispark")
 def closest_ispark_page():
-    closest = getClosestIspark()
-    return render_template(
-        "closest_ispark.html",
-        closest_ispark={
-            "name": closest[0][0] if closest[0] else None,
-            "latitude": closest[0][1] if closest[0] else None,
-            "longitude": closest[0][2] if closest[0] else None,
-        },
-        distance=closest[1],
-    )
+    isparks_list = session.query(Ispark).all()
+    isparks_dict = [ispark.to_dict() for ispark in isparks_list]
+    return render_template("closest_ispark.html", isparks_dict=isparks_dict)
 
 
 @app.route("/reverse_geocode", methods=["GET", "POST"])
@@ -232,62 +216,48 @@ def reverse_geocode_route():
 @app.route("/ispark/<int:id>")
 def ispark(id):
     ispark = session.query(Ispark).get(id)
-    lat = ispark.latitude
-    lon = ispark.longitude
+    lat = ispark.lat
+    lon = ispark.lng
     return render_template("ispark.html", ispark=ispark, lat=lat, lon=lon)
-
-
-def colorOfMarker(argument):
-
-    # Define a dictionary mapping park types to colors
-    switcher = {
-        "AÇIK OTOPARK": "blue",
-        "MİNİBÜS PARK": "purple",
-        "TAKSİ PARK": "red",
-        "KAPALI OTOPARK": "black",
-        "YOL ÜSTÜ": "green",
-    }
-
-    # Return the color based on the park type or default to 'gray'
-    return switcher.get(argument, "gray")
-
 
 @app.route("/ispark_map/<int:id>")
 def ispark_map(id):
     ispark = session.query(Ispark).get(id)
+    global curLocation
     if ispark:
-        lat = ispark.latitude
-        lon = ispark.longitude
-        fAddress= reverse_geocode(lat, lon)
+        lat = ispark.lat
+        lon = ispark.lng
+        fAddress = reverse_geocode(lat, lon)
         distance = get_distance(
-            lat, lon, getCurrentLocation()[0], getCurrentLocation()[1]
+            lat, lon, curLocation[0], curLocation[1]
         )
 
         # Convert the Ispark object to a dictionary
         ispark_data = {
             "id": ispark.id,
-            "park_name": ispark.park_name,
-            "latitude": ispark.latitude,
-            "longitude": ispark.longitude,
-            "park_type_desc": ispark.park_type_desc,
+            "name": ispark.name,
+            "latitude": ispark.lat,
+            "longitude": ispark.lng,
+            "park_type_desc": ispark.park_type,
             "ispark_loc": ispark.location,
         }
 
-        return render_template("ispark_map.html", fAddress=fAddress, ispark=ispark_data, distance=distance)
+        return render_template(
+            "ispark_map.html", fAddress=fAddress, ispark=ispark_data, distance=distance
+        )
     return "Ispark location not found", 404
 
 
 @app.route("/isparks_map")
 def isparks_map():
     isparks = session.query(Ispark).all()
-
+    
     # Convert the Ispark objects to dictionaries
     isparks_dict = [ispark.to_dict() for ispark in isparks]
 
-    distances = [get_distance(getCurrentLocation()[0], getCurrentLocation()[1], ispark.latitude, ispark.longitude) for ispark in isparks]
-    
-
-    return render_template("isparks_map.html", isparks=isparks_dict, distances=distances)
+    return render_template(
+        "isparks_map.html", isparks=isparks_dict
+    )
 
 
 if __name__ == "__main__":

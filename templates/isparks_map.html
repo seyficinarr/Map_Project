@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="https://js.arcgis.com/4.28/esri/themes/light/main.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/map.css') }}">
     <script src="https://js.arcgis.com/4.28/"></script>
-
 </head>
 
 <body>
@@ -16,7 +15,7 @@
         <button class="toggleButton" id="toggleFilter">+</button>
         <div class="icon">⚙️</div>
         <div class="content">
-            <label for="districtFilter">Filter by Counties:</label>
+            <label for="districtFilter">Filter by districts:</label>
             <select id="districtFilter" multiple>
             </select>
             <label for="singledistrictFilter">Or select a single district:</label>
@@ -36,15 +35,47 @@
 
     <div id="viewDiv"></div>
 
-    <div id="map_explainer">
-        <p style="color:green"><strong>Green Color: The park is available.</strong></p>
-        <p style="color:red"><strong>Red Color: The park is full.</strong></p>
-        <p style="color:gray"><strong>Gray Color: The park is closed at the moment.</strong></p>
+    <div id="map_explainer" >
+        <button class="toggleButton" id="toggleMapExplainer">—</button>
+        <p class="status" style="color:rgb(14, 201, 14)"><strong>Green Color: The park is available.</strong></p>
+        <p class="status" style="color:rgb(235, 6, 6)"><strong>Red Color: The park is full.</strong></p>
+        <p class="status" style="color:rgb(206, 19, 206)"><strong>Purple Color: The park is closed at the moment.</strong></p>
     </div>
 
     <div id="info">
         <h2>Info</h2>
-        <p>Number of isparks found: {{count}}</p>
+        <p><strong>Number of isparks found:</strong> {{count}}</p>
+    </div>
+
+    <div id="isparkInfo">
+        <table>
+            <tr>
+                <th><strong>Ispark Name</strong></th>
+                <th><strong>District</strong></th>
+                <th><strong>Work Hours</strong></th>
+                <th><strong>Status</strong></th>
+                <th><strong>Empty Capacity/Capacity</strong></th>
+                <th><strong>Update Date</strong></th>
+                <th><strong>Distance</strong></th>
+                <th><strong>Get Direction</strong></th>
+            </tr>
+            <tr>
+                <td id="isparkName"></td>
+                <td id="isparkDistrict"></td>
+                <td id="isparkWorkHours"></td>
+                <td id="isparkStatus"></td>
+                <td id="isparkEmptyCapacity"></td>
+                <td id="isparkUpdateDate"></td>
+                <td id="isparkDistance"></td>
+                <td id="isparkGetDirection"></td>
+            </tr>
+            
+        </table>
+    </div>
+
+    <div id="highlightControl">
+        <label for="highlightToggle">Enable/Disable District Highlighting</label>
+        <input type="checkbox" id="highlightToggle" checked>
     </div>
 
     <script>
@@ -58,15 +89,17 @@
             "esri/geometry/Point",
             "esri/geometry/geometryEngine",
             "esri/geometry/support/webMercatorUtils",
-            "esri/symbols/PictureMarkerSymbol"
-        ], function (Map, MapView, Graphic, GraphicsLayer, Locate, GeoJSONLayer, Point, geometryEngine, webMercatorUtils, PictureMarkerSymbol) {
+            "esri/symbols/PictureMarkerSymbol",
+            "esri/widgets/BasemapGallery",
+            "esri/widgets/BasemapToggle",
+        ], function (Map, MapView, Graphic, GraphicsLayer, Locate, GeoJSONLayer, Point, geometryEngine, webMercatorUtils, PictureMarkerSymbol, BasemapGallery, BasemapToggle) {
 
             const isparks = {{ isparks| tojson
         }};
 
         // Create the map and view
         const map = new Map({
-            basemap: "topo-vector"
+            basemap: "dark-gray"
         });
 
         const view = new MapView({
@@ -82,6 +115,7 @@
         let allGraphics = [];
         let currentLatitude = null;
         let currentLongitude = null;
+        let highlightDistrict = true;
 
         getCurrentLocation((lat, lng) => {
             if (lat !== null && lng !== null) {
@@ -110,6 +144,7 @@
                         size: 8
                     },
                     attributes: {
+                        id: ispark.id,
                         name: ispark.name,
                         description: ispark.park_type,
                         district: ispark.district,
@@ -134,12 +169,22 @@
 
             // Wait for all promises to resolve before updating the count
             Promise.all(graphicPromises).then(() => {
-                document.getElementById('info').innerHTML = `<p>Number of isparks found: ${count}</p>`;
+                document.getElementById('info').innerHTML = `<p><strong>Number of isparks found:</strong> ${count}</p>`;
             });
         }
 
+
         document.getElementById("closestIsparkButton").addEventListener("click", getClosestIspark);
         document.getElementById("showAllIsparks").addEventListener("click", showAllIsparks);
+
+        document.getElementById('toggleMapExplainer').addEventListener('click', function () {
+                const mapExplainer = document.getElementById('map_explainer');
+                mapExplainer.classList.toggle('collapsed');
+        });
+
+        document.getElementById('highlightToggle').addEventListener('change', function (event) {
+            highlightDistrict = event.target.checked;
+        });
 
         function getClosestIspark() {
             let distance = Infinity;
@@ -162,16 +207,12 @@
             // Create a Graphic for the marker
             const markerSymbol = {
                 type: "picture-marker",
-                url: "static/images/image copy 3.png",
+                url: "static/images/pin.png",
                 width: "48px",
                 height: "48px",
                 anchor: "bottom",
                 yoffset: 20
             };
-
-            console.log(markerSymbol);
-
-
 
             const pointGraphic = new Graphic({
                 geometry: point,
@@ -191,7 +232,6 @@
 
             // Add the marker Graphic to the GraphicsLayer
             graphicsLayer.add(pointGraphic);
-            console.log(closestIspark.lat + "," + closestIspark.lng)
             view.center = [closestIspark.lng, closestIspark.lat];
             view.zoom = [14];
         }
@@ -231,19 +271,18 @@
         }
 
         function populatedistrictDropdown() {
-            const counties = Array.from(new Set(isparks.map(ispark => ispark.district)));
+            const districts = Array.from(new Set(isparks.map(ispark => ispark.district)));
 
             const select = document.getElementById('districtFilter');
             select.innerHTML = '';
 
-            counties.forEach(district => {
+            districts.forEach(district => {
                 const option = document.createElement('option');
                 option.value = district;
                 option.textContent = district;
                 select.appendChild(option);
             });
         }
-
         populatedistrictDropdown();
 
         function showAllIsparks(){
@@ -254,15 +293,15 @@
             }
 
             document.getElementById("info").innerHTML = `<p>Search for all isparks.</p>`;
-            document.getElementById("info").innerHTML += `<p>Number of isparks found: ${count}</p>`;
+            document.getElementById("info").innerHTML += `<p><strong>Number of isparks found:</strong> ${count}</p>`;
         }
 
-        function filterByCounties(selectedCounties) {
+        function filterBydistricts(selecteddistricts) {
             let count = 0;
 
             for (const graph of allGraphics) {
                 const district = normalizeString(graph.attributes.district);
-                if (selectedCounties.some(selecteddistrict =>
+                if (selecteddistricts.some(selecteddistrict =>
                     normalizeString(selecteddistrict).toLowerCase().includes(district.toLowerCase())
                 )) {
                     graph.visible = true;
@@ -274,7 +313,7 @@
 
             // Display the total count of isparks found
             document.getElementById("info").innerHTML = `<p>Search for selected areas</p>`;
-            document.getElementById("info").innerHTML += `<p>Number of isparks found: ${count}</p>`;
+            document.getElementById("info").innerHTML += `<p><strong>Number of isparks found:</strong> ${count}</p>`;
 
         }
 
@@ -292,13 +331,13 @@
             });
 
             districtName = districtName.substring(0, 1).toUpperCase() + districtName.substring(1);
-            document.getElementById('info').innerHTML = `<p>Selected district is: ${districtName}</p>`;
-            document.getElementById('info').innerHTML += `<p>Number of isparks found: ${count}</p>`;
+            document.getElementById('info').innerHTML = `<p><strong>Selected district is:</strong> ${districtName}</p>`;
+            document.getElementById('info').innerHTML += `<p><strong>Number of isparks found:</strong> ${count}</p>`;
         }
 
         document.getElementById('districtFilter').addEventListener('change', function (event) {
             const selectedOptions = Array.from(event.target.selectedOptions).map(option => option.value);
-            filterByCounties(selectedOptions);
+            filterBydistricts(selectedOptions);
         });
 
         document.getElementById('singledistrictFilter').addEventListener('input', function (event) {
@@ -323,7 +362,7 @@
         });
 
         locateWidget.on("locate", function (event) {
-            view.zoom = 14;
+            view.zoom = 9.75;
         });
 
         // Add GeoJSON Layer
@@ -338,8 +377,8 @@
                     type: "simple-fill",
                     color: [0, 0, 0, 0], // Transparent fill color
                     outline: {
-                        color: "green", // Color of the boundary lines
-                        width: 2 // Width of the boundary lines
+                        color: "orange", // Color of the boundary lines
+                        width: 1 // Width of the boundary lines
                     }
                 }
             }
@@ -370,23 +409,26 @@
                         if (highlight) {
                             highlight.remove(); // Remove previous highlight
                         }
+                        if(highlightDistrict){
+                            const feature = response.results.find(result => result.graphic.layer === districtLayer);
+                            // Check if feature is found and log the result
+                            if (feature) {
 
-                        const feature = response.results.find(result => result.graphic.layer === districtLayer);
-                        // Check if feature is found and log the result
-                        if (feature) {
+                                highlight = layerView.highlight(feature.graphic);
 
-                            highlight = layerView.highlight(feature.graphic);
+                                const id = feature.graphic.attributes.__OBJECTID;
 
-                            const id = feature.graphic.attributes.__OBJECTID;
-
-                            ftr = getFeatureById(id);
-                            let districtName = ftr.properties.name.toLowerCase();
-                            districtName = districtName.toString();
-                            districtName = districtName === "eyüpsultan" ? "eyüp" : districtName;
-                            filterBySingledistrict(districtName);
-                        } else {
-                            layerView.highlight([]);
+                                ftr = getFeatureById(id);
+                                let districtName = ftr.properties.name.toLowerCase();
+                                districtName = districtName.toString();
+                                districtName = districtName === "eyüpsultan" ? "eyüp" : districtName;
+                                filterBySingledistrict(districtName);
+                            } else {
+                                showAllIsparks();
+                                layerView.highlight([]);
+                            }
                         }
+                        
                     }).catch(function (error) {
                         // Handle errors in hitTest
                         console.error("Error in hitTest:", error);
@@ -394,6 +436,16 @@
                 }, 100); // Adjust debounce delay if needed
             });
 
+        });
+
+        view.on("click", function (event) {
+            view.hitTest(event).then(function (response) {
+                const graphic = response.results.find(result => result.graphic.layer === graphicsLayer);
+                if (graphic) {
+                    const parkId = graphic.graphic.attributes.id;
+                    showIsparkInfo(parkId);
+                }
+            });
         });
 
         let isparks_data = [];
@@ -408,10 +460,25 @@
             } catch (error) {
                 console.error('Error loading data:', error);
             }
+
+            
         }
 
         // Call the function to fetch data
         fetchIsparkData();
+        
+
+        // Add BasemapToggle widget
+        const basemapToggle = new BasemapToggle({
+            view: view,
+            nextBasemap: "topo-vector"
+            
+        });
+
+        
+        view.ui.add(basemapToggle, "bottom-right");
+
+        // addGraphics();
 
         function defineIsparkStatus(id) {
             // Check if isparks_data is populated
@@ -441,7 +508,7 @@
             } else if (defineIsparkStatus(id) == 1) {
                 return "red";
             } else {
-                return "gray";
+                return "purple";
             }
         }
 
@@ -492,7 +559,57 @@
         function getFeatureById(id) {
             return geojsonData.features.find(feature => feature.id === id);
         }
+
+        function showIsparkInfo(id) {
+            // Fetch details of the selected ispark
+            fetch(`https://api.ibb.gov.tr/ispark/ParkDetay?id=${id}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok ' + response.statusText);
+                    }
+                    return response.json(); // Parse JSON data from the response
+                })
+                .then(data => {
+                    const detail = data[0]; // Get the first detail object
+
+                    // Find the ispark data from the previously fetched data
+                    const ispark = isparks_data.find(result => result.parkID == id);
+
+                    if (ispark && detail) {
+                        const isOpen = ispark.isOpen;
+                        const updateDate = detail.updateDate;
+                        const name = ispark.parkName;
+                        const capacity = ispark.capacity;
+                        const emptyCapacity = ispark.emptyCapacity;
+                        const workHours = ispark.workHours;
+                        const district = ispark.district;
+                        const distance = getDistance(ispark.lat, ispark.lng);
+                        // Update the HTML with the fetched details
+                        document.getElementById("isparkName").innerHTML = name;
+                        document.getElementById("isparkDistrict").innerHTML = district;
+                        document.getElementById("isparkWorkHours").innerHTML = workHours;
+                        document.getElementById("isparkStatus").innerHTML = isOpen ? "Open" : "Closed";
+                        document.getElementById("isparkEmptyCapacity").innerHTML = emptyCapacity + "/" + capacity;
+                        document.getElementById("isparkUpdateDate").innerHTML = updateDate;
+                        document.getElementById("isparkDistance").innerHTML = distance+" km away";
+                        document.getElementById("isparkGetDirection").innerHTML = `<a href="https://www.google.com/maps?q=${ispark.lat},${ispark.lng}" target="_blank">Get Direction</a>`;
+
+                        // Display the ispark info
+                        document.getElementById("isparkInfo").style.display = 'block';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching ispark details:', error);
+                });
+            }
+
+        
+
+        
+
         });
+
+        
     </script>
 </body>
 
